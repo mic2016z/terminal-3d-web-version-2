@@ -3,7 +3,6 @@ import { onMounted, onBeforeUnmount, ref } from "vue";
 import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import * as THREE from "three";
 
 useHead({
   title: "Terminal Yard Operating System | Replica",
@@ -19,105 +18,84 @@ useHead({
 
 let lenis: Lenis | null = null;
 let rafId = 0;
-const truckWebglCanvas = ref<HTMLCanvasElement | null>(null);
+const truckCanvas = ref<HTMLCanvasElement | null>(null);
 let truckDestroy: (() => void) | null = null;
 
 const tiltHandlers: Array<{ el: HTMLElement; move: (e: MouseEvent) => void; leave: () => void }> = [];
+const TRUCK_FRAME_COUNT = 272;
+const truckFrames = Array.from({ length: TRUCK_FRAME_COUNT }, (_, i) => `/frames/solutions/webp/${i}.webp`);
 function setupTruckSequence() {
-  const canvas = truckWebglCanvas.value;
+  const canvas = truckCanvas.value;
   if (!canvas) return;
+  const ctx = canvas.getContext("2d", { alpha: true });
+  if (!ctx) return;
 
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
-  camera.position.set(0, 2.2, 6.2);
-  camera.lookAt(0, 1.05, 0);
-
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha: true,
-    powerPreference: "high-performance",
-  });
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
-
-  const ambient = new THREE.AmbientLight(0xdff7f1, 0.62);
-  const key = new THREE.DirectionalLight(0xffffff, 0.95);
-  key.position.set(3.2, 5.8, 4.6);
-  const fill = new THREE.DirectionalLight(0x6bd4be, 0.5);
-  fill.position.set(-4.3, 2.4, -2.4);
-  scene.add(ambient, key, fill);
-
-  const floor = new THREE.Mesh(
-    new THREE.CircleGeometry(4.8, 64),
-    new THREE.MeshStandardMaterial({ color: 0x0e2825, metalness: 0.1, roughness: 0.95 }),
-  );
-  floor.rotation.x = -Math.PI * 0.5;
-  floor.position.y = 0;
-  scene.add(floor);
-
-  const truckPivot = new THREE.Group();
-  const truck = new THREE.Group();
-  truckPivot.add(truck);
-  scene.add(truckPivot);
-
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3a6c63, metalness: 0.34, roughness: 0.52 });
-  const cabinMat = new THREE.MeshStandardMaterial({ color: 0x6be0c2, metalness: 0.24, roughness: 0.42 });
-  const detailMat = new THREE.MeshStandardMaterial({ color: 0x16302c, metalness: 0.22, roughness: 0.7 });
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0a0d0d, metalness: 0.1, roughness: 0.94 });
-
-  const trailer = new THREE.Mesh(new THREE.BoxGeometry(2.15, 1.05, 1.45), bodyMat);
-  trailer.position.set(-0.82, 1.26, 0);
-  truck.add(trailer);
-
-  const chassis = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.46, 1.52), detailMat);
-  chassis.position.set(0, 0.7, 0);
-  truck.add(chassis);
-
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.08, 1.0, 1.4), cabinMat);
-  cabin.position.set(1.26, 1.28, 0);
-  truck.add(cabin);
-
-  const hood = new THREE.Mesh(new THREE.BoxGeometry(1.14, 0.56, 1.3), bodyMat);
-  hood.position.set(2.2, 0.94, 0);
-  truck.add(hood);
-
-  const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.34, 1.2), detailMat);
-  bumper.position.set(2.74, 0.58, 0);
-  truck.add(bumper);
-
-  const axleXs = [-1.62, -0.42, 1.28, 2.14];
-  const axleZs = [-0.76, 0.76];
-  axleXs.forEach((x) => {
-    axleZs.forEach((z) => {
-      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.26, 28), wheelMat);
-      wheel.rotation.z = Math.PI * 0.5;
-      wheel.position.set(x, 0.38, z);
-      truck.add(wheel);
-    });
-  });
-
-  const bounds = new THREE.Box3().setFromObject(truck);
-  const center = new THREE.Vector3();
-  bounds.getCenter(center);
-  truck.position.sub(center);
+  const images: HTMLImageElement[] = new Array(TRUCK_FRAME_COUNT);
+  let lastFrame = -1;
+  let disposed = false;
+  const frame = { value: 0 };
 
   const resize = () => {
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
     if (!width || !height) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    renderer.setPixelRatio(dpr);
-    renderer.setSize(width, height, false);
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    renderer.render(scene, camera);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw(Math.round(frame.value), true);
   };
 
-  const sequence = gsap.to(truckPivot.rotation, {
-    y: Math.PI * 2.15,
+  const draw = (idx: number, force = false) => {
+    if (disposed) return;
+    const image = images[idx];
+    if (!image || !image.complete || image.naturalWidth === 0) return;
+    if (!force && lastFrame === idx) return;
+    lastFrame = idx;
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (!w || !h) return;
+
+    const imageRatio = image.naturalWidth / image.naturalHeight;
+    const canvasRatio = w / h;
+    let drawW = w;
+    let drawH = h;
+    if (canvasRatio > imageRatio) {
+      drawH = w / imageRatio;
+    } else {
+      drawW = h * imageRatio;
+    }
+    const dx = (w - drawW) * 0.5;
+    const dy = (h - drawH) * 0.5;
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(image, dx, dy, drawW, drawH);
+  };
+
+  const loadFrame = (idx: number) => {
+    if (images[idx]) return;
+    const img = new Image();
+    img.decoding = "async";
+    img.loading = "eager";
+    img.onload = () => {
+      if (idx === 0) draw(0, true);
+      draw(Math.round(frame.value));
+    };
+    img.src = truckFrames[idx];
+    images[idx] = img;
+  };
+
+  loadFrame(0);
+  for (let i = 1; i < TRUCK_FRAME_COUNT; i++) {
+    setTimeout(() => {
+      if (!disposed) loadFrame(i);
+    }, Math.floor(i / 8) * 10);
+  }
+
+  const sequence = gsap.to(frame, {
+    value: TRUCK_FRAME_COUNT - 1,
     ease: "none",
+    snap: "value",
     scrollTrigger: {
       trigger: ".truck-sequence",
       start: "top top",
@@ -126,7 +104,7 @@ function setupTruckSequence() {
       pin: ".truck-stage",
       invalidateOnRefresh: true,
     },
-    onUpdate: () => renderer.render(scene, camera),
+    onUpdate: () => draw(Math.round(frame.value)),
   });
 
   window.addEventListener("resize", resize);
@@ -134,12 +112,13 @@ function setupTruckSequence() {
   resize();
 
   truckDestroy = () => {
+    disposed = true;
     sequence.kill();
     window.removeEventListener("resize", resize);
     ScrollTrigger.removeEventListener("refreshInit", resize);
-    renderer.dispose();
-    floor.geometry.dispose();
-    (floor.material as THREE.Material).dispose();
+    images.forEach((img) => {
+      if (img) img.src = "";
+    });
   };
 }
 
@@ -171,7 +150,7 @@ onMounted(() => {
     });
   });
 
-  gsap.utils.toArray<HTMLElement>(".media-card").forEach((el) => {
+  gsap.utils.toArray<HTMLElement>(".media-card:not(.truck-stage)").forEach((el) => {
     gsap.to(el, {
       yPercent: -8,
       ease: "none",
@@ -270,7 +249,7 @@ onBeforeUnmount(() => {
           </p>
         </div>
         <div class="truck-stage media-card">
-          <canvas ref="truckWebglCanvas" class="truck-canvas"></canvas>
+          <canvas ref="truckCanvas" class="truck-canvas"></canvas>
         </div>
       </section>
 

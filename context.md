@@ -39,3 +39,11 @@ Commands Run: patch update only.
 Results: Truck motion now comes only from scroll-driven rotation, keeping framing stable.
 Next Step: Push and redeploy.
 ---
+Timestamp: 2026-03-05 06:24:20 (local time)
+Signed: Codex
+Task: Match original truck section more closely: restore textured truck via original frame sequence and fix scroll/pin behavior.
+Files Changed: D:\Coding\Terminal 3d web version 2\app\app.vue (replaced Three.js mock truck with 272-frame local canvas sequence; excluded truck-stage from global media-card parallax), D:\Coding\Terminal 3d web version 2\public\frames\solutions\webp\*.webp (272 source frames downloaded), D:\Coding\Terminal 3d web version 2\package.json and package-lock.json (removed temporary three dependency), D:\Coding\Terminal 3d web version 2\context.md.
+Commands Run: frame fetch from terminal-industries /static/frames/solutions/webp; npm install; npm run build.
+Results: Textured rotating truck sequence restored and pinned section no longer scrolls out from media-card parallax conflict.
+Next Step: Push to GitHub and redeploy Vercel for user verification.
+---
