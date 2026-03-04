@@ -34,6 +34,8 @@ function setupTruckSequence() {
   let lastFrame = -1;
   let disposed = false;
   const frame = { value: 0 };
+  let fitRect: { dx: number; dy: number; drawW: number; drawH: number } | null = null;
+  let baseRatio = 16 / 9;
 
   const resize = () => {
     const width = canvas.clientWidth;
@@ -43,33 +45,53 @@ function setupTruckSequence() {
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const canvasRatio = width / height;
+    let drawW = width;
+    let drawH = height;
+    if (canvasRatio > baseRatio) {
+      drawH = width / baseRatio;
+    } else {
+      drawW = height * baseRatio;
+    }
+    fitRect = {
+      dx: (width - drawW) * 0.5,
+      dy: (height - drawH) * 0.5,
+      drawW,
+      drawH,
+    };
     draw(Math.round(frame.value), true);
   };
 
   const draw = (idx: number, force = false) => {
     if (disposed) return;
-    const image = images[idx];
-    if (!image || !image.complete || image.naturalWidth === 0) return;
+    let image = images[idx];
+    if (!image || !image.complete || image.naturalWidth === 0) {
+      let resolved: HTMLImageElement | undefined;
+      for (let offset = 1; offset < 10; offset++) {
+        const left = images[idx - offset];
+        if (left && left.complete && left.naturalWidth > 0) {
+          resolved = left;
+          break;
+        }
+        const right = images[idx + offset];
+        if (right && right.complete && right.naturalWidth > 0) {
+          resolved = right;
+          break;
+        }
+      }
+      if (!resolved) return;
+      image = resolved;
+    }
     if (!force && lastFrame === idx) return;
     lastFrame = idx;
 
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     if (!w || !h) return;
-
-    const imageRatio = image.naturalWidth / image.naturalHeight;
-    const canvasRatio = w / h;
-    let drawW = w;
-    let drawH = h;
-    if (canvasRatio > imageRatio) {
-      drawH = w / imageRatio;
-    } else {
-      drawW = h * imageRatio;
-    }
-    const dx = (w - drawW) * 0.5;
-    const dy = (h - drawH) * 0.5;
+    if (!fitRect) resize();
+    if (!fitRect) return;
     ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(image, dx, dy, drawW, drawH);
+    ctx.drawImage(image, fitRect.dx, fitRect.dy, fitRect.drawW, fitRect.drawH);
   };
 
   const loadFrame = (idx: number) => {
@@ -78,18 +100,18 @@ function setupTruckSequence() {
     img.decoding = "async";
     img.loading = "eager";
     img.onload = () => {
-      if (idx === 0) draw(0, true);
+      if (idx === 0) {
+        baseRatio = img.naturalWidth / img.naturalHeight;
+        resize();
+      }
       draw(Math.round(frame.value));
     };
     img.src = truckFrames[idx];
     images[idx] = img;
   };
 
-  loadFrame(0);
-  for (let i = 1; i < TRUCK_FRAME_COUNT; i++) {
-    setTimeout(() => {
-      if (!disposed) loadFrame(i);
-    }, Math.floor(i / 8) * 10);
+  for (let i = 0; i < TRUCK_FRAME_COUNT; i++) {
+    if (!disposed) loadFrame(i);
   }
 
   const sequence = gsap.to(frame, {

@@ -47,3 +47,11 @@ Commands Run: frame fetch from terminal-industries /static/frames/solutions/webp
 Results: Textured rotating truck sequence restored and pinned section no longer scrolls out from media-card parallax conflict.
 Next Step: Push to GitHub and redeploy Vercel for user verification.
 ---
+Timestamp: 2026-03-05 07:37:37 (local time)
+Signed: Codex
+Task: Fix frame stutter/zoom pulsing in truck animation section.
+Files Changed: D:\Coding\Terminal 3d web version 2\app\app.vue, D:\Coding\Terminal 3d web version 2\context.md.
+Commands Run: Updated sequence renderer to lock fixed fit rectangle from frame 0 ratio, preload all 272 frames immediately, and use nearest-loaded-frame fallback.
+Results: Eliminates per-frame resize jitter causing big/small pulsing while preserving scroll-linked rotation.
+Next Step: Push to GitHub and redeploy Vercel for visual verification.
+---
