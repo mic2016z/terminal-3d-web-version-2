@@ -129,22 +129,12 @@ function setupTruckSequence() {
     onUpdate: () => renderer.render(scene, camera),
   });
 
-  const subtleTilt = gsap.to(truckPivot.rotation, {
-    x: -0.08,
-    repeat: -1,
-    yoyo: true,
-    duration: 2.6,
-    ease: "sine.inOut",
-    onUpdate: () => renderer.render(scene, camera),
-  });
-
   window.addEventListener("resize", resize);
   ScrollTrigger.addEventListener("refreshInit", resize);
   resize();
 
   truckDestroy = () => {
     sequence.kill();
-    subtleTilt.kill();
     window.removeEventListener("resize", resize);
     ScrollTrigger.removeEventListener("refreshInit", resize);
     renderer.dispose();
