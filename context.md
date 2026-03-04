@@ -55,3 +55,11 @@ Commands Run: Updated sequence renderer to lock fixed fit rectangle from frame 0
 Results: Eliminates per-frame resize jitter causing big/small pulsing while preserving scroll-linked rotation.
 Next Step: Push to GitHub and redeploy Vercel for visual verification.
 ---
+Timestamp: 2026-03-05 07:55:51 (local time)
+Signed: Codex
+Task: Add local Playwright capture workflow for 272 origin homepage frames.
+Files Changed: D:\Coding\Terminal 3d web version 2\scripts\capture-origin-272.mjs (new script), D:\Coding\Terminal 3d web version 2\package.json (capture script + devDependency playwright), D:\Coding\Terminal 3d web version 2\package-lock.json (dependency update), D:\Coding\Terminal 3d web version 2\.gitignore (ignore generated capture frames), D:\Coding\Terminal 3d web version 2\context.md.
+Commands Run: npm install; npx playwright install chromium; npm run capture:origin272; npm run build.
+Results: Generated exactly 272 PNG reference frames at D:\Coding\Terminal 3d web version 2\reference\origin-scroll-272 (000.png..271.png). Build passes.
+Next Step: Push this tooling update to GitHub and redeploy Vercel.
+---

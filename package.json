@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
+    "capture:origin272": "node scripts/capture-origin-272.mjs",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -15,5 +16,8 @@
     "nuxt": "^4.3.1",
     "vue": "^3.5.29",
     "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "playwright": "^1.54.2"
   }
 }

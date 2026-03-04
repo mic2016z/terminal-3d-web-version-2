@@ -24,3 +24,5 @@ logs
 !.env.example
 
 .vercel
+reference/origin-scroll-272
+_origin_latest.html
