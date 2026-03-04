@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terminal Industries Replica</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="grid-bg"></div>
+    <header class="site-header">
+      <a class="logo" href="#">Terminal</a>
+      <nav class="nav">
+        <a href="#platform">Platform</a>
+        <a href="#results">Results</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <a class="btn btn-small" href="#contact">Book Demo</a>
+    </header>
+
+    <main id="app">
+      <section class="hero section">
+        <div class="copy reveal">
+          <p class="eyebrow">TERMINAL YARD OPERATING SYSTEM</p>
+          <h1>The New Standard in Yard Operations</h1>
+          <p>
+            A near-duplicate landing experience inspired by terminal-industries.com:
+            high-contrast typography, pre-rendered 3D media, and scroll-led motion.
+          </p>
+          <div class="actions">
+            <a class="btn" href="#contact">See It In Action</a>
+            <a class="btn ghost" href="#platform">Explore Platform</a>
+          </div>
+        </div>
+        <div class="media-card tilt reveal">
+          <video
+            autoplay
+            muted
+            loop
+            playsinline
+            src="https://a.storyblok.com/f/337048/x/0f153ebd58/vid_4-3_wide_v02_1.mp4"
+          ></video>
+        </div>
+      </section>
+
+      <section id="results" class="stats section reveal">
+        <article><h2>35%</h2><p>faster turnaround</p></article>
+        <article><h2>22%</h2><p>less idle time</p></article>
+        <article><h2>99.9%</h2><p>event visibility</p></article>
+      </section>
+
+      <section id="platform" class="feature section">
+        <div class="text reveal">
+          <p class="eyebrow">LIVE OPERATION VIEW</p>
+          <h3>One command layer for docks, yards, and carriers</h3>
+          <p>
+            The source site uses Nuxt/Vue with GSAP + Lenis and pre-rendered motion
+            videos instead of real-time Three.js scenes. This replica follows that
+            pattern.
+          </p>
+        </div>
+        <div class="stack">
+          <div class="media-card tilt reveal">
+            <video
+              autoplay
+              muted
+              loop
+              playsinline
+              src="https://a.storyblok.com/f/337048/x/85fd9d83d7/vid_4-1_wide_prerender_1.mp4"
+            ></video>
+          </div>
+          <div class="media-card tilt reveal">
+            <video
+              autoplay
+              muted
+              loop
+              playsinline
+              src="https://a.storyblok.com/f/337048/x/5d1992bef6/vid_3-2_prerender_1.mp4"
+            ></video>
+          </div>
+        </div>
+      </section>
+
+      <section class="testimonial section reveal">
+        <blockquote>
+          “The interface feels like an operating room for yard flow. Everything is
+          visible, measurable, and coordinated.”
+        </blockquote>
+        <p>Head of Operations, Midwest Freight Group</p>
+      </section>
+
+      <section id="contact" class="cta section reveal">
+        <h3>See terminal orchestration on your data</h3>
+        <p>Get a custom walkthrough with your yard profile.</p>
+        <form class="form" onsubmit="return false;">
+          <input type="text" placeholder="Name" />
+          <input type="email" placeholder="Work Email" />
+          <button class="btn" type="submit">Request Demo</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/bundled/lenis.min.js"></script>
+    <script src="./script.js"></script>
+  </body>
+  </html>
