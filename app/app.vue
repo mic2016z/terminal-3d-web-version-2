@@ -3,6 +3,7 @@ import { onMounted, onBeforeUnmount, ref } from "vue";
 import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import * as THREE from "three";
 
 useHead({
   title: "Terminal Yard Operating System | Replica",
@@ -18,96 +19,138 @@ useHead({
 
 let lenis: Lenis | null = null;
 let rafId = 0;
-const truckCanvas = ref<HTMLCanvasElement | null>(null);
-const truckFallback = ref(false);
+const truckWebglCanvas = ref<HTMLCanvasElement | null>(null);
+let truckDestroy: (() => void) | null = null;
 
 const tiltHandlers: Array<{ el: HTMLElement; move: (e: MouseEvent) => void; leave: () => void }> = [];
-const TRUCK_FRAME_COUNT = 272;
-const truckFrameUrls = Array.from(
-  { length: TRUCK_FRAME_COUNT },
-  (_, i) => `https://terminal-industries.com/static/frames/solutions/webp/${i}.webp`,
-);
-
 function setupTruckSequence() {
-  const canvas = truckCanvas.value;
+  const canvas = truckWebglCanvas.value;
   if (!canvas) return;
 
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+  camera.position.set(0, 2.2, 6.2);
+  camera.lookAt(0, 1.05, 0);
 
-  const images: HTMLImageElement[] = [];
-  let loaded = 0;
-  let failed = 0;
-  const frame = { current: 0 };
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: true,
+    powerPreference: "high-performance",
+  });
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
 
-  const resize = () => {
-    const rect = canvas.getBoundingClientRect();
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    draw(Math.round(frame.current));
-  };
+  const ambient = new THREE.AmbientLight(0xdff7f1, 0.62);
+  const key = new THREE.DirectionalLight(0xffffff, 0.95);
+  key.position.set(3.2, 5.8, 4.6);
+  const fill = new THREE.DirectionalLight(0x6bd4be, 0.5);
+  fill.position.set(-4.3, 2.4, -2.4);
+  scene.add(ambient, key, fill);
 
-  const draw = (index: number) => {
-    const img = images[index];
-    if (!img || !img.complete || img.naturalWidth === 0) return;
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(4.8, 64),
+    new THREE.MeshStandardMaterial({ color: 0x0e2825, metalness: 0.1, roughness: 0.95 }),
+  );
+  floor.rotation.x = -Math.PI * 0.5;
+  floor.position.y = 0;
+  scene.add(floor);
 
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
-    if (!w || !h) return;
+  const truckPivot = new THREE.Group();
+  const truck = new THREE.Group();
+  truckPivot.add(truck);
+  scene.add(truckPivot);
 
-    ctx.clearRect(0, 0, w, h);
-    const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
-    const dw = img.naturalWidth * scale;
-    const dh = img.naturalHeight * scale;
-    const dx = (w - dw) * 0.5;
-    const dy = (h - dh) * 0.5;
-    ctx.drawImage(img, dx, dy, dw, dh);
-  };
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3a6c63, metalness: 0.34, roughness: 0.52 });
+  const cabinMat = new THREE.MeshStandardMaterial({ color: 0x6be0c2, metalness: 0.24, roughness: 0.42 });
+  const detailMat = new THREE.MeshStandardMaterial({ color: 0x16302c, metalness: 0.22, roughness: 0.7 });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0a0d0d, metalness: 0.1, roughness: 0.94 });
 
-  truckFrameUrls.forEach((url, i) => {
-    const img = new Image();
-    img.onload = () => {
-      loaded += 1;
-      if (loaded === 1) {
-        resize();
-        draw(0);
-      }
-    };
-    img.onerror = () => {
-      failed += 1;
-      if (failed > TRUCK_FRAME_COUNT * 0.35) {
-        truckFallback.value = true;
-      }
-    };
-    img.src = url;
-    images[i] = img;
+  const trailer = new THREE.Mesh(new THREE.BoxGeometry(2.15, 1.05, 1.45), bodyMat);
+  trailer.position.set(-0.82, 1.26, 0);
+  truck.add(trailer);
+
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.46, 1.52), detailMat);
+  chassis.position.set(0, 0.7, 0);
+  truck.add(chassis);
+
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.08, 1.0, 1.4), cabinMat);
+  cabin.position.set(1.26, 1.28, 0);
+  truck.add(cabin);
+
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(1.14, 0.56, 1.3), bodyMat);
+  hood.position.set(2.2, 0.94, 0);
+  truck.add(hood);
+
+  const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.34, 1.2), detailMat);
+  bumper.position.set(2.74, 0.58, 0);
+  truck.add(bumper);
+
+  const axleXs = [-1.62, -0.42, 1.28, 2.14];
+  const axleZs = [-0.76, 0.76];
+  axleXs.forEach((x) => {
+    axleZs.forEach((z) => {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.26, 28), wheelMat);
+      wheel.rotation.z = Math.PI * 0.5;
+      wheel.position.set(x, 0.38, z);
+      truck.add(wheel);
+    });
   });
 
-  const sequence = gsap.to(frame, {
-    current: TRUCK_FRAME_COUNT - 1,
-    snap: "current",
+  const bounds = new THREE.Box3().setFromObject(truck);
+  const center = new THREE.Vector3();
+  bounds.getCenter(center);
+  truck.position.sub(center);
+
+  const resize = () => {
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (!width || !height) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+  };
+
+  const sequence = gsap.to(truckPivot.rotation, {
+    y: Math.PI * 2.15,
     ease: "none",
     scrollTrigger: {
       trigger: ".truck-sequence",
       start: "top top",
-      end: "+=1800",
+      end: "+=2100",
       scrub: true,
       pin: ".truck-stage",
       invalidateOnRefresh: true,
     },
-    onUpdate: () => draw(Math.round(frame.current)),
+    onUpdate: () => renderer.render(scene, camera),
+  });
+
+  const subtleTilt = gsap.to(truckPivot.rotation, {
+    x: -0.08,
+    repeat: -1,
+    yoyo: true,
+    duration: 2.6,
+    ease: "sine.inOut",
+    onUpdate: () => renderer.render(scene, camera),
   });
 
   window.addEventListener("resize", resize);
   ScrollTrigger.addEventListener("refreshInit", resize);
+  resize();
 
-  onBeforeUnmount(() => {
+  truckDestroy = () => {
     sequence.kill();
+    subtleTilt.kill();
     window.removeEventListener("resize", resize);
     ScrollTrigger.removeEventListener("refreshInit", resize);
-  });
+    renderer.dispose();
+    floor.geometry.dispose();
+    (floor.material as THREE.Material).dispose();
+  };
 }
 
 onMounted(() => {
@@ -172,6 +215,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   cancelAnimationFrame(rafId);
   lenis?.destroy();
+  truckDestroy?.();
+  truckDestroy = null;
   ScrollTrigger.getAll().forEach((t) => t.kill());
   tiltHandlers.forEach(({ el, move, leave }) => {
     el.removeEventListener("mousemove", move);
@@ -227,24 +272,15 @@ onBeforeUnmount(() => {
 
       <section class="truck-sequence section reveal">
         <div class="truck-copy">
-          <p class="eyebrow">WHEEL-LINKED TRUCK ROTATION</p>
-          <h3>Scroll to rotate the truck sequence frame-by-frame</h3>
+          <p class="eyebrow">WHEEL-LINKED 3D ROTATION</p>
+          <h3>Scroll to orbit around the truck in true 3D</h3>
           <p>
-            This section now mirrors the source interaction model: canvas image-sequence
-            scrubbing mapped to scroll progress.
+            The truck stays locked in-frame while scroll controls a continuous 3D
+            rotational orbit.
           </p>
         </div>
         <div class="truck-stage media-card">
-          <canvas v-show="!truckFallback" ref="truckCanvas" class="truck-canvas"></canvas>
-          <video
-            v-show="truckFallback"
-            autoplay
-            muted
-            loop
-            playsinline
-            class="truck-fallback"
-            src="https://a.storyblok.com/f/337048/x/0f153ebd58/vid_4-3_wide_v02_1.mp4"
-          ></video>
+          <canvas ref="truckWebglCanvas" class="truck-canvas"></canvas>
         </div>
       </section>
 
@@ -539,12 +575,10 @@ h1 {
   border-radius: 24px;
 }
 
-.truck-canvas,
-.truck-fallback {
+.truck-canvas {
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: contain;
   background: radial-gradient(circle at 50% 40%, #153330 0%, #071514 70%);
 }
 
